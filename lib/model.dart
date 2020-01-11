@@ -77,16 +77,6 @@ class HtmlFieldState extends State<HtmlField> {
                     data: this.currentValue,
                   )),
                 )),
-            // Flexible(
-            //     flex: 8,
-            //     child: Align(
-            //         alignment: Alignment.centerLeft,
-            //         child: GestureDetector(
-            //           child: Text("Edit"),
-            //           onTap: () {
-            //             print('Edit');
-            //           },
-            //         ))),
           ],
         ),
         Row(
@@ -211,7 +201,6 @@ class FloatFieldState extends State<FloatField> {
                             controller.text = this.currentValue.toStringAsFixed(10);
                           }),
                           Container(
-                              color: Colors.yellow,
                               width: 250,
                               child: Padding(
                                   padding: EdgeInsets.only(left: 10),
@@ -219,7 +208,6 @@ class FloatFieldState extends State<FloatField> {
                                     controller: controller,
                                     textAlign: TextAlign.center,
                                     onEditingComplete: () {
-                                      print(controller.text);
                                       if (controller.text == "") this.currentValue = 0.0;
                                       try {
                                         double.parse(controller.text);
@@ -288,13 +276,19 @@ class IntegerFieldState extends State<IntegerField> {
                             });
                           }),
                           Container(
-                              width: 150,
+                              width: 120,
                               child: TextField(
-                                maxLength: 10,
                                 controller: controller,
                                 textAlign: TextAlign.center,
-                                onChanged: (value) {
-                                  this.currentValue = int.parse(value);
+                                onEditingComplete: () {
+                                  if (controller.text == "") this.currentValue = 0;
+                                  try {
+                                    double.parse(controller.text);
+                                    this.currentValue = int.parse(controller.text);
+                                  } catch (e) {
+                                    print("Failed");
+                                    controller.text = this.currentValue.round().toString();
+                                  }
                                 },
                               )),
                           ScaledButton(cons.maxWidth * 0.03, Icon(Icons.add), () {

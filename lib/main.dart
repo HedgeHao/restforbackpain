@@ -6,7 +6,6 @@ import 'package:admin_template/model.dart';
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(title: 'Flutter Demo', home: Scaffold(body: MyHome()));
@@ -59,7 +58,6 @@ class MyHomeState extends State<MyHome> {
       currentTab = getTabContent('users');
     }
     return Container(
-        color: Colors.yellow,
         child: Row(
           children: <Widget>[
             Flexible(flex: 1, child: Container(color: Colors.blue, child: SidePanel(switchTab))),
