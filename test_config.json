@@ -1,0 +1,47 @@
+{
+    "title": "MY ADMIN",
+    "host": "http://127.0.0.1",
+    "icon": "https://cdn1.iconfinder.com/data/icons/places-17/64/ac_unit_air_conditioner-512.png",
+    "models": {
+        "users": {
+            "endpoints": {},
+            "struct": [
+                {
+                    "name": "username",
+                    "type": "string",
+                    "editable": false
+                },
+                {
+                    "name": "displayName",
+                    "type": "string"
+                },
+                {
+                    "name": "administrator",
+                    "type": "boolean"
+                },
+                {
+                    "name": "age",
+                    "type": "integer",
+                    "min": 0,
+                    "max": 120
+                },
+                {
+                    "name": "height",
+                    "type": "float",
+                    "min": 0.0,
+                    "max": 250.0
+                },
+                {
+                    "name": "birthday",
+                    "type": "date",
+                    "begin": "1900/01/01",
+                    "end": "2020/01/01"
+                },
+                {
+                    "name": "story",
+                    "type": "html"
+                }
+            ]
+        }
+    }
+}

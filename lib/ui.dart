@@ -9,9 +9,10 @@ class ScaledButton extends StatelessWidget {
   final double size;
   final Widget child;
   final Function onPressed;
+  final bool editable;
   Color color;
 
-  ScaledButton(this.size, this.child, this.onPressed, {this.color});
+  ScaledButton(this.size, this.child, this.onPressed, {this.color, this.editable: true});
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +29,11 @@ class ScaledButton extends StatelessWidget {
                 shape: CircleBorder(),
                 elevation: 2.0,
                 fillColor: this.color,
-                onPressed: this.onPressed,
-
+                onPressed: () {
+                  if (this.editable) {
+                    this.onPressed();
+                  }
+                },
               ),
             )
           ],

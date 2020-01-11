@@ -1,7 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import 'package:admin_template/ui.dart';
 import 'package:admin_template/model.dart';
+import 'package:flutter/services.dart';
+
+Map<String, dynamic> configure;
 
 void main() => runApp(MyApp());
 
@@ -17,53 +22,66 @@ class MyHome extends StatefulWidget {
 }
 
 class MyHomeState extends State<MyHome> {
+  Future _future;
+
+  Future<String> loadString() async => await rootBundle.loadString('assets/data/config.json');
+
+  @override
+  void initState() {
+    _future = loadString();
+    tabInstances['dashboard'] = DashboardScreen();
+    super.initState();
+  }
+
   final List<String> availabelTabs = ['dashboard', 'users'];
   Map<String, Widget> tabInstances = {};
   Widget currentTab;
 
   void switchTab(String name) {
-    if (availabelTabs.contains(name)) {
-      setState(() {
-        currentTab = getTabContent(name);
-      });
+    if (!tabInstances.containsKey(name)) {
+      tabInstances[name] = ModelScreen(name, configure['models'][name]['struct'], {'username': 'Test'});
     }
-  }
 
-  Widget getTabContent(String name, {init: true, data: null}) {
-    if (availabelTabs.contains(name)) {
-      if (tabInstances.containsKey(name)) {
-        return tabInstances[name];
-      } else {
-        if (init) {
-          Widget w;
-          switch (name) {
-            case 'dashboard':
-              w = DashboardScreen();
-              break;
-            case 'users':
-              w = ModelScreen('Users');
-              break;
-          }
-          return w;
-        } else {
-          return null;
-        }
-      }
-    }
+    setState(() {
+      currentTab = tabInstances[name];
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (currentTab == null) {
-      currentTab = getTabContent('users');
-    }
-    return Container(
-        child: Row(
-          children: <Widget>[
-            Flexible(flex: 1, child: Container(color: Colors.blue, child: SidePanel(switchTab))),
-            Flexible(flex: 5, child: currentTab),
-          ],
-        ));
+    return FutureBuilder(
+      future: _future,
+      builder: (ctx, snapshot) {
+        if (!snapshot.hasData) {
+          return Text("Loading...");
+        } else {
+          if (currentTab == null) {
+            currentTab = tabInstances["dashboard"];
+          }
+          if (configure == null) {
+            configure = jsonDecode(snapshot.data);
+            print('Load Config File:' + configure.toString());
+          }
+          List<Widget> sidePanelModels = List<Widget>();
+          Map<String, dynamic> models = configure['models'];
+          for (String model in models.keys) {
+            sidePanelModels.add(GestureDetector(
+                child: Text("   - " + model, style: TEXTSTYLE_SIDE),
+                onTap: () {
+                  switchTab(model);
+                }));
+          }
+
+          return Container(
+              child: Row(
+            children: <Widget>[
+              Flexible(flex: 1, child: Container(color: Colors.blue, child: SidePanel(sidePanelModels))),
+              Flexible(flex: 5, child: currentTab),
+            ],
+          ));
+        }
+      },
+    );
   }
 }
 
@@ -75,9 +93,9 @@ class DashboardScreen extends StatelessWidget {
 }
 
 class SidePanel extends StatefulWidget {
-  final Function tabClicked;
+  final List<Widget> models;
 
-  SidePanel(this.tabClicked);
+  SidePanel(this.models);
 
   SidePanelState createState() => SidePanelState();
 }
@@ -104,13 +122,7 @@ class SidePanelState extends State<SidePanel> {
                 Text("Dashboard", style: TEXTSTYLE_SIDE),
                 Text("Models", style: TEXTSTYLE_SIDE),
                 Column(
-                  children: <Widget>[
-                    GestureDetector(
-                        child: Text("   - Users", style: TEXTSTYLE_SIDE),
-                        onTap: () {
-                          widget.tabClicked('users');
-                        }),
-                  ],
+                  children: widget.models,
                 ),
               ],
             )),
