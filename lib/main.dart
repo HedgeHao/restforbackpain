@@ -1,12 +1,14 @@
 import 'dart:convert';
 
+import 'package:admin_template/modelList.dart';
 import 'package:flutter/material.dart';
 
+import 'package:admin_template/global.dart' as Global;
 import 'package:admin_template/ui.dart';
+import 'package:admin_template/utils.dart';
 import 'package:admin_template/model.dart';
 import 'package:flutter/services.dart';
 
-Map<String, dynamic> configure;
 
 void main() => runApp(MyApp());
 
@@ -23,6 +25,8 @@ class MyHome extends StatefulWidget {
 
 class MyHomeState extends State<MyHome> {
   Future _future;
+  Map<String, ModelListScreen> modelLists = Map<String, ModelListScreen>();
+  Map<String, ModelScreen> modelScreens = Map<String, ModelScreen>();
 
   Future<String> loadString() async => await rootBundle.loadString('assets/data/config.json');
 
@@ -37,13 +41,15 @@ class MyHomeState extends State<MyHome> {
   Map<String, Widget> tabInstances = {};
   Widget currentTab;
 
-  void switchTab(String name) {
-    if (!tabInstances.containsKey(name)) {
-      tabInstances[name] = ModelScreen(name, configure['models'][name]['struct'], {'username': 'Test'});
-    }
-
+  void switchModelListTab(String name) {
     setState(() {
-      currentTab = tabInstances[name];
+      currentTab = this.modelLists[name];
+    });
+  }
+
+  void switchModelTab(String name) {
+    setState(() {
+      currentTab = this.modelScreens[name];
     });
   }
 
@@ -58,18 +64,24 @@ class MyHomeState extends State<MyHome> {
           if (currentTab == null) {
             currentTab = tabInstances["dashboard"];
           }
-          if (configure == null) {
-            configure = jsonDecode(snapshot.data);
-            print('Load Config File:' + configure.toString());
-          }
+
+          Global.configure = jsonDecode(snapshot.data);
+          print('Load Config File:' + Global.configure.toString());
+
           List<Widget> sidePanelModels = List<Widget>();
-          Map<String, dynamic> models = configure['models'];
-          for (String model in models.keys) {
+
+          Map<String, dynamic> models = Global.configure['models'];
+          for (String name in models.keys) {
+            Map<String, dynamic> model = models[name];
             sidePanelModels.add(GestureDetector(
-                child: Text("   - " + model, style: TEXTSTYLE_SIDE),
+                child: Text('   - ' + name),
                 onTap: () {
-                  switchTab(model);
+                  switchModelListTab(name);
                 }));
+
+            modelLists[name] = ModelListScreen(name, model['struct'], model['endpoints'], switchModelTab);
+
+            modelScreens[name] = ModelScreen(name, model['struct'], switchModelListTab);
           }
 
           return Container(
@@ -92,15 +104,11 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-class SidePanel extends StatefulWidget {
+class SidePanel extends StatelessWidget {
   final List<Widget> models;
 
   SidePanel(this.models);
 
-  SidePanelState createState() => SidePanelState();
-}
-
-class SidePanelState extends State<SidePanel> {
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -109,23 +117,32 @@ class SidePanelState extends State<SidePanel> {
       children: <Widget>[
         Flexible(
           flex: 2,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[Icon(Icons.ac_unit), Text("MY ADMIN")],
-          ),
+          child: LayoutBuilder(builder: (ctx, cons) {
+            return Container(
+                width: cons.maxWidth,
+                height: 50,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[fetchImageFromUrl(Global.configure['icon'], size: 50), Text(Global.configure['title'])],
+                ));
+          }),
         ),
+        Divider(),
         Flexible(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text("Dashboard", style: TEXTSTYLE_SIDE),
-                Text("Models", style: TEXTSTYLE_SIDE),
-                Column(
-                  children: widget.models,
-                ),
-              ],
-            )),
+          flex: 3,
+          child: Padding(
+              padding: EdgeInsets.only(left: 5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text("Dashboard", style: TEXTSTYLE_SIDE),
+                  Text("Models", style: TEXTSTYLE_SIDE),
+                  Column(
+                    children: this.models,
+                  ),
+                ],
+              )),
+        )
       ],
     );
   }

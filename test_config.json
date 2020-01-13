@@ -1,7 +1,7 @@
 {
     "title": "MY ADMIN",
     "host": "http://127.0.0.1",
-    "icon": "https://cdn1.iconfinder.com/data/icons/places-17/64/ac_unit_air_conditioner-512.png",
+    "icon": "icon://59505",
     "models": {
         "users": {
             "endpoints": {},
@@ -40,6 +40,26 @@
                 {
                     "name": "story",
                     "type": "html"
+                },
+                {
+                    "name": "test1",
+                    "type": "string"
+                },
+                {
+                    "name": "test2",
+                    "type": "string"
+                },
+                {
+                    "name": "test3",
+                    "type": "string"
+                },
+                {
+                    "name": "test4",
+                    "type": "string"
+                },
+                {
+                    "name": "test5",
+                    "type": "string"
                 }
             ]
         }

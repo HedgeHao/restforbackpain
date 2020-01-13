@@ -4,22 +4,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 import 'package:flutter_html/flutter_html.dart';
 
-class ModelScreen extends StatelessWidget {
+class ModelScreen extends StatefulWidget {
   final String name;
   final List<dynamic> struct;
-  final Map<String, dynamic> data;
-  List<Widget> contents = List<Widget>();
+  final Function switchModelList;
 
-  ModelScreen(this.name, this.struct, this.data) {
-    contents.add(
-      Align(alignment: Alignment.centerLeft, child: Text(upperFirst(name), style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold))),
-    );
-    contents.add(Divider());
-  }
+  ModelScreen(this.name, this.struct, this.switchModelList);
+
+  ModelScreenState createState() => ModelScreenState();
+}
+
+class ModelScreenState extends State<ModelScreen> {
+  Future<Map<String, dynamic>> future;
+
+  ModelScreenState();
 
   @override
-  Widget build(BuildContext context) {
-    for (Map<String, dynamic> field in struct) {
+  void initState() {
+    future = null;
+    super.initState();
+  }
+
+  Future<Map<String, dynamic>> fetchData() async {
+    await Future.delayed(Duration(seconds: 2));
+    Map<String, dynamic> testData = {
+      'username': 'test',
+      'displayName': ' Tester',
+      'administrator': true,
+      'age': 18,
+      'height': 180.5,
+      'birthday': '1990/01/05',
+    };
+    return testData;
+  }
+
+  List<Widget> buildContent(Map<String, dynamic> data) {
+    List<Widget> contents = List<Widget>();
+    for (Map<String, dynamic> field in widget.struct) {
       switch (field['type']) {
         case 'string':
           contents.add(StringField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null));
@@ -43,12 +64,45 @@ class ModelScreen extends StatelessWidget {
       }
     }
 
+    return contents;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    future = fetchData();
     return Container(
         color: Colors.white,
         padding: EdgeInsets.all(10.0),
-        child: Column(
-          children: this.contents,
-        ));
+        child: Column(children: <Widget>[
+          Row(
+            children: <Widget>[
+              FlatButton(
+                  child: Icon(Icons.arrow_back_ios),
+                  onPressed: () {
+                    widget.switchModelList(widget.name);
+                  }),
+              Align(alignment: Alignment.centerLeft, child: Text(upperFirst(widget.name), style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          FutureBuilder(
+              future: future,
+              builder: (ctx, snapshot) {
+                if (!snapshot.hasData) {
+                  return Text('Loading...');
+                } else if (snapshot.hasError) {
+                  print(snapshot.error);
+                  return Text('Error');
+                } else if (snapshot.hasData) {
+                  return Expanded(
+                      child: SingleChildScrollView(
+                          child: Column(
+                    children: buildContent(snapshot.data),
+                  )));
+                } else {
+                  return Container(width: 0, height: 0);
+                }
+              }),
+        ]));
   }
 }
 
@@ -76,7 +130,7 @@ class HtmlFieldState extends State<HtmlField> {
       controller.text = widget.value;
     }
 
-    if(this.currentValue == null || this.currentValue == ""){
+    if (this.currentValue == null || this.currentValue == "") {
       this.currentValue = "</br>";
     }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 const Color COLOR_SIDE_FONT = Colors.white;
-const TextStyle TEXTSTYLE_SIDE = TextStyle(color: COLOR_SIDE_FONT, fontSize: 32);
+const TextStyle TEXTSTYLE_SIDE = TextStyle(color: COLOR_SIDE_FONT, fontSize: 28);
 
 const double MODEL_COLUMN_SPACE = 10.0;
 
