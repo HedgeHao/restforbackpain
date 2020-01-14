@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:admin_template/dbTools.dart';
 import 'package:admin_template/modelList.dart';
 import 'package:flutter/material.dart';
 
@@ -8,7 +9,6 @@ import 'package:admin_template/ui.dart';
 import 'package:admin_template/utils.dart';
 import 'package:admin_template/model.dart';
 import 'package:flutter/services.dart';
-
 
 void main() => runApp(MyApp());
 
@@ -34,6 +34,7 @@ class MyHomeState extends State<MyHome> {
   void initState() {
     _future = loadString();
     tabInstances['dashboard'] = DashboardScreen();
+    tabInstances['dbtool'] = DBToolScreen();
     super.initState();
   }
 
@@ -50,6 +51,12 @@ class MyHomeState extends State<MyHome> {
   void switchModelTab(String name) {
     setState(() {
       currentTab = this.modelScreens[name];
+    });
+  }
+
+  void switchTab(String name) {
+    setState(() {
+      currentTab = this.tabInstances[name];
     });
   }
 
@@ -87,7 +94,7 @@ class MyHomeState extends State<MyHome> {
           return Container(
               child: Row(
             children: <Widget>[
-              Flexible(flex: 1, child: Container(color: Colors.blue, child: SidePanel(sidePanelModels))),
+              Flexible(flex: 1, child: Container(color: Colors.blue, child: SidePanel(sidePanelModels, switchTab))),
               Flexible(flex: 5, child: currentTab),
             ],
           ));
@@ -106,44 +113,60 @@ class DashboardScreen extends StatelessWidget {
 
 class SidePanel extends StatelessWidget {
   final List<Widget> models;
+  final Function switchTab;
 
-  SidePanel(this.models);
+  SidePanel(this.models, this.switchTab);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Flexible(
-          flex: 2,
-          child: LayoutBuilder(builder: (ctx, cons) {
-            return Container(
-                width: cons.maxWidth,
-                height: 50,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[fetchImageFromUrl(Global.configure['icon'], size: 50), Text(Global.configure['title'])],
-                ));
-          }),
-        ),
-        Divider(),
-        Flexible(
-          flex: 3,
-          child: Padding(
-              padding: EdgeInsets.only(left: 5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text("Dashboard", style: TEXTSTYLE_SIDE),
-                  Text("Models", style: TEXTSTYLE_SIDE),
-                  Column(
-                    children: this.models,
-                  ),
-                ],
+    return LayoutBuilder(builder: (ctx, cons) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+              width: cons.maxWidth,
+              height: 50,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[fetchImageFromUrl(Global.configure['icon'], size: 50), Text(Global.configure['title'])],
               )),
-        )
-      ],
-    );
+          Divider(),
+          Container(
+            width: cons.maxWidth,
+            height: cons.maxHeight - 50 * 2 - 40,
+            child: Padding(
+                padding: EdgeInsets.only(left: 5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text("Dashboard", style: TEXTSTYLE_SIDE),
+                    Text("Models", style: TEXTSTYLE_SIDE),
+                    Column(
+                      children: this.models,
+                    ),
+                  ],
+                )),
+          ),
+          Divider(),
+          Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                  width: cons.maxWidth,
+                  height: 50,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      FlatButton(
+                        child: Icon(Icons.data_usage),
+                        onPressed: () {
+                          switchTab('dbtool');
+                        },
+                      )
+                    ],
+                  ))),
+        ],
+      );
+    });
   }
 }
