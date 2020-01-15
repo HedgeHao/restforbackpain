@@ -158,7 +158,7 @@ class SidePanel extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
                       FlatButton(
-                        child: Icon(Icons.data_usage),
+                        child: Icon(Icons.settings),
                         onPressed: () {
                           switchTab('dbtool');
                         },

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mysql1/mysql1.dart' as MySQL;
+import 'package:postgres/postgres.dart' as Psql;
 
 import 'package:admin_template/utils.dart';
 import 'package:admin_template/jsonText.dart';
@@ -52,9 +53,16 @@ class DBToolScreenState extends State<DBToolScreen> {
               flex: 1,
               child: DropdownButton(
                 value: dropdownValue,
-                items: <DropdownMenuItem<String>>[DropdownMenuItem(child: Text("MySQL"), value: 'mysql'), DropdownMenuItem(child: Text("PostgreSQL"), value: 'postgresql')],
+                items: <DropdownMenuItem<String>>[DropdownMenuItem(child: Text("MySQL"), value: 'mysql'), DropdownMenuItem(child: Text("PostgreSQL"), value: 'psql')],
                 onChanged: (String item) {
-                  print(item);
+                  switch (item) {
+                    case 'mysql':
+                      controller_port.text = "3306";
+                      break;
+                    case 'psql':
+                      controller_port.text = "5432";
+                      break;
+                  }
                   setState(() {
                     dropdownValue = item;
                   });
@@ -91,6 +99,22 @@ class DBToolScreenState extends State<DBToolScreen> {
                           });
                         });
                         break;
+                      case 'psql':
+                        Psql.PostgreSQLConnection connection = Psql.PostgreSQLConnection(controller_host.text, int.parse(controller_port.text), controller_dbname.text,
+                            username: controller_user.text, password: controller_password.text);
+                        if (!connection.isClosed) {
+                          connection.close();
+                        }
+                        connection.open().then((error) {
+                          print(error);
+                          dbUtility = PsqlUtility(connection);
+                          setState(() {
+                            future_structure = null;
+                            future_structure = dbUtility.getStructure();
+                          });
+                        });
+
+                        break;
                     }
                   },
                 )),
@@ -102,10 +126,12 @@ class DBToolScreenState extends State<DBToolScreen> {
             if (snapshot.connectionState == ConnectionState.done && !snapshot.hasData) {
               return Text('Loading...');
             } else if (snapshot.hasError) {
+              print('Future Error:' + snapshot.error.toString());
               return Text('Error');
             } else if (snapshot.hasData) {
-              String json = jsonEncode(snapshot.data);
-              return Padding(padding:EdgeInsets.only(left:20),child:Align(alignment: Alignment.topLeft, child: Container(height: 450, child: SingleChildScrollView(child: JsonText(json, tabs:4)))));
+              configJson = jsonEncode(snapshot.data);
+              return Padding(
+                  padding: EdgeInsets.only(left: 20), child: Align(alignment: Alignment.topLeft, child: Container(height: 450, child: SingleChildScrollView(child: JsonText(configJson, tabs: 4)))));
             } else {
               return Container();
             }
@@ -123,7 +149,6 @@ class DBToolScreenState extends State<DBToolScreen> {
                 onPressed: () {
                   File(getConfigFilePath()).writeAsStringSync(configJson);
                   answerDialog(context, '', 'File saved', null, options: ['OK']);
-                  print('File wrote');
                 }),
             FlatButton(
                 child: Text('Load'),
@@ -132,10 +157,23 @@ class DBToolScreenState extends State<DBToolScreen> {
                     configJson = File(getConfigFilePath()).readAsStringSync();
                   });
                   answerDialog(context, '', 'File Loaded', null, options: ['OK']);
-                  print('File loaded');
                 }),
           ],
         ),
+        // Row(
+        //   children: <Widget>[
+        //     Container(
+        //         width: 300,
+        //         child: TextField(
+        //           controller: controller_sql,
+        //         )),
+        //     FlatButton(
+        //         child: Text('Test'),
+        //         onPressed: () {
+        //           dbUtility.getStructure();
+        //         }),
+        //   ],
+        // )
       ],
     );
   }
@@ -146,6 +184,74 @@ abstract class DatabaseUtility {
   Future<Map<String, dynamic>> getStructure() async {}
 }
 
+class PsqlUtility extends DatabaseUtility {
+  Psql.PostgreSQLConnection connection;
+
+  PsqlUtility(this.connection);
+
+  @override
+  Future<String> query(String sql) async {
+    Psql.PostgreSQLResult result = await connection.query(sql);
+    return result.toString();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getStructure() async {
+    Map<String, dynamic> configure = Map<String, dynamic>();
+    configure['title'] = '';
+    configure['host'] = '';
+    configure['icon'] = '';
+    Map<String, dynamic> models = Map<String, dynamic>();
+
+    List<String> tables = List<String>();
+    List<List<dynamic>> result = await this.connection.query("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';");
+    for (List<dynamic> table in result) {
+      tables.add(table[0].toString());
+    }
+
+    for (String s in tables) {
+      Map<String, dynamic> model = Map<String, dynamic>();
+      model['endpoints'] = {};
+      List<Map<String, dynamic>> structs = List<Map<String, dynamic>>();
+
+      result = await this.connection.query("select column_name, data_type, column_default,is_nullable from information_schema.columns where table_name='$s'");
+      for (List<dynamic> r in result) {
+        Map<String, dynamic> struct = Map<String, dynamic>();
+        struct['name'] = r[0].toString();
+        switch (r[1]) {
+          case 'text':
+            struct['type'] = 'string';
+            break;
+          case 'smallint':
+          case 'bigint':
+            struct['type'] = 'interger';
+            break;
+          case 'real':
+            struct['type'] = 'float';
+            break;
+          default:
+            if (r[1].toString().startsWith('character')) {
+              struct['type'] = 'string';
+            } else if (r[1].toString().startsWith('time')) {
+              struct['type'] = 'time';
+            } else {
+              struct['type'] = r[1].toString();
+            }
+        }
+        struct['default'] = r[2].toString();
+        struct['null'] = r[3] == 'YES';
+        structs.add(struct);
+      }
+
+      model['struct'] = structs;
+      models[s] = model;
+    }
+
+    configure['models'] = models;
+    return configure;
+  }
+}
+
 class MySQLUtility extends DatabaseUtility {
   MySQL.MySqlConnection connection;
 
@@ -154,8 +260,6 @@ class MySQLUtility extends DatabaseUtility {
   @override
   Future<String> query(String sql) async {
     MySQL.Results result = await this.connection.query(sql);
-    print('+Query');
-    print(result);
     result.toString();
     return result.toString();
   }
@@ -185,7 +289,16 @@ class MySQLUtility extends DatabaseUtility {
         Map<String, dynamic> struct = Map<String, dynamic>();
         Map<String, dynamic> field = r.fields;
         struct['name'] = field['Field'].toString();
-        struct['type'] = field['Type'].toString();
+        String type = field['Type'].toString();
+        if (type.startsWith('int') || type.startsWith('tinyint')) {
+          struct['type'] = 'integer';
+        } else if (type.startsWith('varchar') || type.startsWith('char')) {
+          struct['type'] = 'string';
+        } else if (type.startsWith('varchar')) {
+          struct['type'] = 'string';
+        } else {
+          struct['type'] = field['Type'].toString();
+        }
         struct['default'] = field['Default'].toString();
         struct['null'] = field['Null'] == 'YES';
         structs.add(struct);
@@ -196,7 +309,6 @@ class MySQLUtility extends DatabaseUtility {
     }
 
     configure['models'] = models;
-    print('-GetStructure');
     return configure;
   }
 }
