@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:admin_template/utils.dart';
+import 'package:admin_template/global.dart' as Global;
 
 class ModelListScreen extends StatefulWidget {
   final String name;
@@ -14,25 +18,34 @@ class ModelListScreen extends StatefulWidget {
 }
 
 class ModelListScreenState extends State<ModelListScreen> {
-  Future<List<Map<String, dynamic>>> data;
+  Future<List<Map<String, dynamic>>> modelData;
   // final Function switchTab;
   List<Widget> headers = List<Widget>();
   List<String> fields = List<String>();
 
   @override
   void initState() {
-    data = null;
+    modelData = null;
     super.initState();
   }
 
   void dataRowClicked(Map<String, dynamic> pData) {
-    widget.switchModel(widget.name);
+    widget.switchModel(widget.name, pData);
   }
 
-  Future<List<Map<String, dynamic>>> fetchData() async{
-    await Future.delayed(Duration(seconds: 2));
-    List<Map<String, dynamic>> data = [{'username':'test1'},{'username':'test2'}];
-    return data;
+  Future<List<Map<String, dynamic>>> fetchData() async {
+    String url = Global.configure['host'] + '/' + Global.configure['models'][widget.name]['endpoints']['name'] + '/' + Global.configure['models'][widget.name]['endpoints']['actions']['readAll'][1];
+    http.Response resp = await http.get(url);
+    Map<String, dynamic> respObj = json.decode(resp.body);
+    List<Map<String, dynamic>> data = List<Map<String, dynamic>>();
+    if (respObj['code'] == 200) {
+      for (dynamic t in respObj['data']) {
+        data.add(t as Map<String, dynamic>);
+      }
+      return data;
+    } else {
+      return null;
+    }
   }
 
   List<Widget> buildHeader(BoxConstraints cons) {
@@ -73,12 +86,12 @@ class ModelListScreenState extends State<ModelListScreen> {
                   width: 100,
                   height: 30,
                   child: GestureDetector(
-                      child: Text(d[field] ?? ""),
+                      child: Text(d[field].toString() ?? ""),
                       onTap: () {
                         dataRowClicked(d);
                       }))));
         } else {
-          dataRow.add(Padding(padding: EdgeInsets.only(left: 3, right: 3), child: Container(color: Colors.yellow, width: 100, height: 30, child: Text(d[field] ?? ""))));
+          dataRow.add(Padding(padding: EdgeInsets.only(left: 3, right: 3), child: Container(color: Colors.yellow, width: 100, height: 30, child: Text(d[field].toString() ?? ""))));
         }
       }
       contents.add(Row(mainAxisAlignment: MainAxisAlignment.center, children: dataRow));
@@ -90,7 +103,7 @@ class ModelListScreenState extends State<ModelListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    data = fetchData();
+    modelData = fetchData();
     return LayoutBuilder(builder: (ctx, cons) {
       return Column(
         children: <Widget>[
@@ -106,11 +119,12 @@ class ModelListScreenState extends State<ModelListScreen> {
               )),
           Padding(padding: EdgeInsets.only(left: 30, right: 30), child: Divider(thickness: 3)),
           FutureBuilder(
-            future: data,
+            future: modelData,
             builder: (ctx, snapshot) {
               if (!snapshot.hasData) {
                 return Text('Loading');
               } else if (snapshot.hasError) {
+                print('Error:' + snapshot.error.toString());
                 return Text('Error');
               } else if (snapshot.hasData) {
                 return Expanded(

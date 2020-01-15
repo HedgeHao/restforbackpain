@@ -29,11 +29,12 @@ class DBToolScreenState extends State<DBToolScreen> {
 
   @override
   void initState() {
+    configJson = "";
     future_structure = null;
     dropdownValue = "mysql";
     super.initState();
 
-    controller_host.text = '127.0.0.1';
+    controller_host.text = 'http://127.0.0.1';
     controller_port.text = '3306';
   }
 
@@ -92,7 +93,7 @@ class DBToolScreenState extends State<DBToolScreen> {
                         MySQL.MySqlConnection.connect(MySQL.ConnectionSettings(
                                 host: controller_host.text, port: int.parse(controller_port.text), user: controller_user.text, password: controller_password.text, db: controller_dbname.text))
                             .then((connection) {
-                          dbUtility = MySQLUtility(connection);
+                          dbUtility = MySQLUtility(connection, title: controller_dbname.text);
                           setState(() {
                             future_structure = null;
                             future_structure = dbUtility.getStructure();
@@ -107,7 +108,7 @@ class DBToolScreenState extends State<DBToolScreen> {
                         }
                         connection.open().then((error) {
                           print(error);
-                          dbUtility = PsqlUtility(connection);
+                          dbUtility = PsqlUtility(connection, title: controller_dbname.text);
                           setState(() {
                             future_structure = null;
                             future_structure = dbUtility.getStructure();
@@ -180,14 +181,25 @@ class DBToolScreenState extends State<DBToolScreen> {
 }
 
 abstract class DatabaseUtility {
+  final Map<String, List<String>> defaultEndpointActions = {
+    'create': ['POST', '0'],
+    'read': ['GET', '\$id'],
+    'update': ['PUT', '\$id'],
+    'delete': ['DELETE', '\$id'],
+    'readAll': ['GET', ''],
+  };
+  final String defaultHost = "http://127.0.0.1:8080";
+  final String defaultIcon = "icon://59505";
+
   Future<String> query(String sql) async {}
   Future<Map<String, dynamic>> getStructure() async {}
 }
 
 class PsqlUtility extends DatabaseUtility {
   Psql.PostgreSQLConnection connection;
+  String title;
 
-  PsqlUtility(this.connection);
+  PsqlUtility(this.connection, {title});
 
   @override
   Future<String> query(String sql) async {
@@ -198,9 +210,9 @@ class PsqlUtility extends DatabaseUtility {
   @override
   Future<Map<String, dynamic>> getStructure() async {
     Map<String, dynamic> configure = Map<String, dynamic>();
-    configure['title'] = '';
-    configure['host'] = '';
-    configure['icon'] = '';
+    configure['title'] = this.title;
+    configure['host'] = this.defaultHost;
+    configure['icon'] = this.defaultIcon;
     Map<String, dynamic> models = Map<String, dynamic>();
 
     List<String> tables = List<String>();
@@ -212,6 +224,9 @@ class PsqlUtility extends DatabaseUtility {
     for (String s in tables) {
       Map<String, dynamic> model = Map<String, dynamic>();
       model['endpoints'] = {};
+      model['endpoints']['name'] = s;
+      model['endpoints']['actions'] = this.defaultEndpointActions;
+
       List<Map<String, dynamic>> structs = List<Map<String, dynamic>>();
 
       result = await this.connection.query("select column_name, data_type, column_default,is_nullable from information_schema.columns where table_name='$s'");
@@ -254,8 +269,9 @@ class PsqlUtility extends DatabaseUtility {
 
 class MySQLUtility extends DatabaseUtility {
   MySQL.MySqlConnection connection;
+  String title;
 
-  MySQLUtility(this.connection);
+  MySQLUtility(this.connection, {this.title});
 
   @override
   Future<String> query(String sql) async {
@@ -267,9 +283,9 @@ class MySQLUtility extends DatabaseUtility {
   @override
   Future<Map<String, dynamic>> getStructure() async {
     Map<String, dynamic> configure = Map<String, dynamic>();
-    configure['title'] = '';
-    configure['host'] = '';
-    configure['icon'] = '';
+    configure['title'] = this.title;
+    configure['host'] = this.defaultHost;
+    configure['icon'] = this.defaultIcon;
     Map<String, dynamic> models = Map<String, dynamic>();
 
     List<String> tables = List<String>();
@@ -282,6 +298,8 @@ class MySQLUtility extends DatabaseUtility {
     for (String s in tables) {
       Map<String, dynamic> model = Map<String, dynamic>();
       model['endpoints'] = {};
+      model['endpoints']['name'] = s;
+      model['endpoints']['actions'] = this.defaultEndpointActions;
       List<Map<String, dynamic>> structs = List<Map<String, dynamic>>();
 
       result = await this.connection.query('desc ' + s + ';');

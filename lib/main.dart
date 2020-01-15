@@ -58,9 +58,16 @@ class MyHomeState extends State<MyHome> {
     });
   }
 
-  void switchModelTab(String name) {
+  void switchModelTab(String name, Map<String, dynamic> pData) {
+    print("+switchModelTab");
+    print(this.modelScreens[name].hashCode);
     setState(() {
       currentTab = this.modelScreens[name];
+      this.modelScreens[name].stateObj.setState((){
+        print("+Debug");
+       print(this.modelScreens[name].stateObj.test);
+       this.modelScreens[name].stateObj.test = "HELLO";
+      });
     });
   }
 
@@ -81,9 +88,8 @@ class MyHomeState extends State<MyHome> {
           if (currentTab == null) {
             currentTab = tabInstances["dashboard"];
           }
-
           Global.configure = jsonDecode(snapshot.data);
-          print('Load Config File:' + Global.configure.toString());
+          // print('Load Config File:' + Global.configure.toString());
 
           List<Widget> sidePanelModels = List<Widget>();
 
@@ -91,14 +97,22 @@ class MyHomeState extends State<MyHome> {
           for (String name in models.keys) {
             Map<String, dynamic> model = models[name];
             sidePanelModels.add(GestureDetector(
-                child: Text('   - ' + name, style: TEXTSTYLE_SIDE,),
+                child: Text(
+                  '   - ' + name,
+                  style: TEXTSTYLE_SIDE,
+                ),
                 onTap: () {
                   switchModelListTab(name);
                 }));
 
-            modelLists[name] = ModelListScreen(name, model['struct'], model['endpoints'], switchModelTab);
+            if (!modelLists.containsKey(name)) {
+              modelLists[name] = ModelListScreen(name, model['struct'], model['endpoints'], switchModelTab);
+            }
 
-            modelScreens[name] = ModelScreen(name, model['struct'], switchModelListTab);
+            if (!modelScreens.containsKey(name)) {
+              modelScreens[name] = ModelScreen(name, model['struct'], switchModelListTab);
+              print(modelScreens[name].hashCode);
+            }
           }
 
           return Container(

@@ -34,6 +34,7 @@ String getFetchUrl(String model, String action) {
 }
 
 String getConfigFilePath() {
+  print(Platform.environment['HOME']);
   return Platform.environment['HOME'] + '/.config.json';
 }
 

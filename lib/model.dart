@@ -1,8 +1,11 @@
+import 'package:admin_template/global.dart' as Global;
 import 'package:admin_template/ui.dart';
 import 'package:admin_template/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ModelScreen extends StatefulWidget {
   final String name;
@@ -11,34 +14,46 @@ class ModelScreen extends StatefulWidget {
 
   ModelScreen(this.name, this.struct, this.switchModelList);
 
-  ModelScreenState createState() => ModelScreenState();
+  ModelScreenState stateObj;
+
+  ModelScreenState createState(){
+    stateObj = ModelScreenState();
+    return stateObj;
+  }
 }
 
 class ModelScreenState extends State<ModelScreen> {
-  Future<Map<String, dynamic>> future;
+  String test;
+  Map<String, dynamic> data = {};
 
   ModelScreenState();
 
   @override
   void initState() {
-    future = null;
+    test = "DEFAULT";
     super.initState();
   }
 
-  Future<Map<String, dynamic>> fetchData() async {
-    await Future.delayed(Duration(seconds: 2));
-    Map<String, dynamic> testData = {
-      'username': 'test',
-      'displayName': ' Tester',
-      'administrator': true,
-      'age': 18,
-      'height': 180.5,
-      'birthday': '1990/01/05',
-    };
-    return testData;
+  void fetchData(String id) {
+    String endpointParsed = Global.configure['models'][widget.name]['endpoints']['actions']['read'][1].toString().replaceAll('\$id', id);
+    print(endpointParsed);
+    String url = Global.configure['host'] + '/' + Global.configure['models'][widget.name]['endpoints']['name'] + '/' + endpointParsed;
+    print(url);
+    http.get(url).then((http.Response resp) {
+      print(resp);
+      Map<String, dynamic> respObj = json.decode(resp.body);
+      Map<String, dynamic> data = Map<String, dynamic>();
+      if (respObj['code'] == 200) {
+        setState(() {
+          this.data = respObj['data'];
+        });
+      }
+    });
   }
 
   List<Widget> buildContent(Map<String, dynamic> data) {
+    print('+BuildContent');
+    print(data);
     List<Widget> contents = List<Widget>();
     for (Map<String, dynamic> field in widget.struct) {
       switch (field['type']) {
@@ -69,40 +84,27 @@ class ModelScreenState extends State<ModelScreen> {
 
   @override
   Widget build(BuildContext context) {
-    future = fetchData();
-    return Container(
-        color: Colors.white,
-        padding: EdgeInsets.all(10.0),
-        child: Column(children: <Widget>[
-          Row(
-            children: <Widget>[
-              FlatButton(
-                  child: Icon(Icons.arrow_back_ios),
-                  onPressed: () {
-                    widget.switchModelList(widget.name);
-                  }),
-              Align(alignment: Alignment.centerLeft, child: Text(upperFirst(widget.name), style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold))),
-            ],
-          ),
-          FutureBuilder(
-              future: future,
-              builder: (ctx, snapshot) {
-                if (!snapshot.hasData) {
-                  return Text('Loading...');
-                } else if (snapshot.hasError) {
-                  print(snapshot.error);
-                  return Text('Error');
-                } else if (snapshot.hasData) {
-                  return Expanded(
-                      child: SingleChildScrollView(
-                          child: Column(
-                    children: buildContent(snapshot.data),
-                  )));
-                } else {
-                  return Container(width: 0, height: 0);
-                }
-              }),
-        ]));
+    return Text(this.test);
+    // return Container(
+    //     color: Colors.white,
+    //     padding: EdgeInsets.all(10.0),
+    //     child: Column(children: <Widget>[
+    //       Row(
+    //         children: <Widget>[
+    //           FlatButton(
+    //               child: Icon(Icons.arrow_back_ios),
+    //               onPressed: () {
+    //                 widget.switchModelList(widget.name);
+    //               }),
+    //           Align(alignment: Alignment.centerLeft, child: Text(upperFirst(widget.name), style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold))),
+    //         ],
+    //       ),
+    //       Expanded(
+    //           child: SingleChildScrollView(
+    //               child: Column(
+    //         children: buildContent(this.data),
+    //       )))
+    //     ]));
   }
 }
 
