@@ -40,3 +40,11 @@ class ScaledButton extends StatelessWidget {
         ));
   }
 }
+
+class BlankTab extends StatelessWidget{
+  @override
+  Widget build(BuildContext context) {
+    return Container();
+  }
+
+}

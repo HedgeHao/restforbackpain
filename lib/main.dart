@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:admin_template/dbTools.dart';
 import 'package:admin_template/modelList.dart';
@@ -8,8 +9,8 @@ import 'package:admin_template/global.dart' as Global;
 import 'package:admin_template/ui.dart';
 import 'package:admin_template/utils.dart';
 import 'package:admin_template/model.dart';
-import 'package:flutter/services.dart';
 
+Widget blankTab = BlankTab();
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -28,11 +29,14 @@ class MyHomeState extends State<MyHome> {
   Map<String, ModelListScreen> modelLists = Map<String, ModelListScreen>();
   Map<String, ModelScreen> modelScreens = Map<String, ModelScreen>();
 
-  Future<String> loadString() async => await rootBundle.loadString('assets/data/config.json');
+  // Future<String> loadConfigFile() async => await rootBundle.loadString('assets/data/config.json');
+  Future<String> loadConfigFile() async {
+    return File(getConfigFilePath()).readAsString();
+  }
 
   @override
   void initState() {
-    _future = loadString();
+    _future = loadConfigFile();
     tabInstances['dashboard'] = DashboardScreen();
     tabInstances['dbtool'] = DBToolScreen();
     super.initState();
@@ -44,7 +48,13 @@ class MyHomeState extends State<MyHome> {
 
   void switchModelListTab(String name) {
     setState(() {
-      currentTab = this.modelLists[name];
+      currentTab = blankTab;
+    });
+
+    Future.delayed(Duration(milliseconds: 10), () {
+      setState(() {
+        currentTab = this.modelLists[name];
+      });
     });
   }
 
@@ -81,7 +91,7 @@ class MyHomeState extends State<MyHome> {
           for (String name in models.keys) {
             Map<String, dynamic> model = models[name];
             sidePanelModels.add(GestureDetector(
-                child: Text('   - ' + name),
+                child: Text('   - ' + name, style: TEXTSTYLE_SIDE,),
                 onTap: () {
                   switchModelListTab(name);
                 }));
@@ -143,6 +153,7 @@ class SidePanel extends StatelessWidget {
                     Text("Dashboard", style: TEXTSTYLE_SIDE),
                     Text("Models", style: TEXTSTYLE_SIDE),
                     Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: this.models,
                     ),
                   ],
