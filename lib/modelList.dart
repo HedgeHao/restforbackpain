@@ -35,6 +35,7 @@ class ModelListScreenState extends State<ModelListScreen> {
   Future<List<Map<String, dynamic>>> fetchData() async {
     String url = Global.configure['host'] + '/' + Global.configure['models'][widget.name]['endpoints']['name'] + '/' + Global.configure['models'][widget.name]['endpoints']['actions']['readAll'][1];
     http.Response resp = await http.get(url);
+    print(url);
     Map<String, dynamic> respObj = json.decode(resp.body);
     List<Map<String, dynamic>> data = List<Map<String, dynamic>>();
     if (respObj['code'] == 200) {

@@ -14,7 +14,7 @@ Widget fetchImageFromUrl(String url, {double size, Color color}) {
   } else if (url.startsWith('icon://')) {
     return Icon(IconData(int.parse(url.substring(7)), fontFamily: 'MaterialIcons'), size: size, color: color);
   } else {
-    return Container(width: 0, height: 0);
+    return null;
   }
 }
 

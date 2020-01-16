@@ -34,7 +34,7 @@ class DBToolScreenState extends State<DBToolScreen> {
     dropdownValue = "mysql";
     super.initState();
 
-    controller_host.text = 'http://127.0.0.1';
+    controller_host.text = '127.0.0.1';
     controller_port.text = '3306';
   }
 
@@ -98,6 +98,7 @@ class DBToolScreenState extends State<DBToolScreen> {
                             future_structure = null;
                             future_structure = dbUtility.getStructure();
                           });
+                        }).catchError((e) {
                         });
                         break;
                       case 'psql':

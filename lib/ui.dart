@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+const Color COLOR_TITLE = Colors.black;
+const TextStyle TESTSTYLE_TITLE = TextStyle(color: COLOR_TITLE, fontSize:28);
 const Color COLOR_SIDE_FONT = Colors.white;
 const TextStyle TEXTSTYLE_SIDE = TextStyle(color: COLOR_SIDE_FONT, fontSize: 28);
 

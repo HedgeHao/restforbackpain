@@ -25,11 +25,41 @@ class ModelScreen extends StatefulWidget {
 
 class ModelScreenState extends State<ModelScreen> {
   Map<String, dynamic> data;
+  Map<String, dynamic> originData;
+
+  void updateValue(String name, dynamic value) {
+    data[name] = value;
+  }
+
+  dynamic getValue(String name) {
+    return data[name];
+  }
 
   @override
   void initState() {
     data = {};
     super.initState();
+  }
+
+  void saveChange(BuildContext ctx) {
+    String endpointParsed = Global.configure['models'][widget.name]['endpoints']['actions']['update'][1].toString().replaceAll('\$id', this.data['id'].toString());
+    String url = Global.configure['host'] + '/' + Global.configure['models'][widget.name]['endpoints']['name'] + '/' + endpointParsed;
+
+    Map<String, dynamic> body = {};
+    for (String index in this.originData.keys) {
+      if (originData[index] != this.data[index]) {
+        body[index] = this.data[index];
+      }
+    }
+
+    print(body);
+
+    http.put(url, body: jsonEncode(body)).then((http.Response resp) {
+      Map<String, dynamic> respObj = json.decode(resp.body);
+      if (respObj['code'] == 200) {
+        answerDialog(ctx, "Message", "Save success", null);
+      }
+    });
   }
 
   void update(int id) {
@@ -38,6 +68,7 @@ class ModelScreenState extends State<ModelScreen> {
     http.get(url).then((http.Response resp) {
       Map<String, dynamic> respObj = json.decode(resp.body);
       if (respObj['code'] == 200) {
+        originData = Map.from(respObj['data']);
         setState(() {
           this.data = respObj['data'];
         });
@@ -48,19 +79,19 @@ class ModelScreenState extends State<ModelScreen> {
   Widget ModelField(Map<String, dynamic> field) {
     switch (field['type']) {
       case 'string':
-        return StringField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+        return StringField(field['name'], getValue, updateValue, editable: field['editable'] == null);
       case 'boolean':
-        return BooleanField(upperFirst(field['name']), data[field['name']] == true, editable: field['editable'] == null);
+        return BooleanField(field['name'], getValue, updateValue, editable: field['editable'] == null);
       case 'integer':
-        return IntegerField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+        return IntegerField(field['name'], getValue, updateValue, editable: field['editable'] == null);
       case 'float':
-        return FloatField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+        return FloatField(field['name'], getValue, updateValue, editable: field['editable'] == null);
       case 'date':
-        return DateField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+        return DateField(field['name'], getValue, updateValue, editable: field['editable'] == null);
       case 'datetime':
-        return DateTimeField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+        return DateTimeField(field['name'], getValue, updateValue, editable: field['editable'] == null);
       case 'html':
-        return HtmlField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+        return HtmlField(field['name'], getValue, updateValue, editable: field['editable'] == null);
       default:
         return Text('Error:' + field.toString());
     }
@@ -86,39 +117,46 @@ class ModelScreenState extends State<ModelScreen> {
               child: SingleChildScrollView(
                   child: Column(
             children: <Widget>[for (Map<String, dynamic> field in widget.struct) ModelField(field)],
-          )))
+          ))),
+          Row(
+            children: <Widget>[
+              FlatButton(
+                child: Text('Save'),
+                onPressed: () {
+                  saveChange(context);
+                },
+              )
+            ],
+          )
         ]));
   }
 }
 
 class HtmlField extends StatefulWidget {
-  final String title, value;
+  final String title;
+  final Function getValue;
+  final Function setValue;
   final bool editable;
 
-  HtmlField(this.title, this.value, {this.editable: true});
+  HtmlField(this.title, this.getValue, this.setValue, {this.editable: true});
 
-  HtmlFieldState createState() => HtmlFieldState(this.value);
+  HtmlFieldState createState() => HtmlFieldState();
 }
 
 class HtmlFieldState extends State<HtmlField> {
-  String currentValue;
-  TextEditingController controller = TextEditingController();
+  final FocusNode focusNode = FocusNode();
+  final TextEditingController controller = TextEditingController();
 
-  HtmlFieldState(value) {
-    controller.text = value;
-    this.currentValue = value;
+  @override
+  void initState() {
+    focusNode.addListener(() {
+      widget.setValue(widget.title, controller.text);
+    });
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (controller.text == "") {
-      controller.text = widget.value;
-    }
-
-    if (this.currentValue == null || this.currentValue == "") {
-      this.currentValue = "</br>";
-    }
-
     return Column(
       children: <Widget>[
         Row(
@@ -129,7 +167,7 @@ class HtmlFieldState extends State<HtmlField> {
                     padding: EdgeInsets.only(right: 15.0),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(widget.title + ':'),
+                      child: Text(upperFirst(widget.title) + ':'),
                     ))),
             Flexible(
                 flex: 85,
@@ -142,7 +180,7 @@ class HtmlFieldState extends State<HtmlField> {
                   ),
                   child: SingleChildScrollView(
                       child: Html(
-                    data: this.currentValue,
+                    data: controller.text,
                   )),
                 )),
           ],
@@ -157,11 +195,6 @@ class HtmlFieldState extends State<HtmlField> {
                   keyboardType: TextInputType.multiline,
                   maxLines: null,
                   controller: controller,
-                  onChanged: (value) {
-                    setState(() {
-                      this.currentValue = value;
-                    });
-                  },
                 )),
           ],
         )
@@ -171,18 +204,22 @@ class HtmlFieldState extends State<HtmlField> {
 }
 
 class DateTimeField extends StatefulWidget {
-  final String title, value;
+  final String title;
+  final Function getValue;
+  final Function setValue;
   final bool editable;
 
-  DateTimeField(this.title, this.value, {this.editable: true});
+  DateTimeField(this.title, this.getValue, this.setValue, {this.editable: true});
 
-  DateTimeFieldState createState() => DateTimeFieldState(this.value);
+  DateTimeFieldState createState() => DateTimeFieldState();
 }
 
 class DateTimeFieldState extends State<DateTimeField> {
   DateTime currentValue;
 
-  DateTimeFieldState(String val) {
+  @override
+  void initState() {
+    String val = widget.getValue(widget.title);
     if (val == null) {
       currentValue = null;
     } else if (val.contains('T')) {
@@ -194,6 +231,7 @@ class DateTimeFieldState extends State<DateTimeField> {
         print('Datetime parse error:' + e.toString());
       }
     }
+    super.initState();
   }
 
   @override
@@ -208,7 +246,7 @@ class DateTimeFieldState extends State<DateTimeField> {
                     padding: EdgeInsets.only(right: 15.0),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(widget.title + ':'),
+                      child: Text(upperFirst(widget.title) + ':'),
                     ))),
             Flexible(
                 flex: 85,
@@ -220,6 +258,7 @@ class DateTimeFieldState extends State<DateTimeField> {
                         Text('  ' + (this.currentValue == null ? '' : DateFormat('yyyy-MM-dd - kk:mm:ss').format(this.currentValue)) + '  '),
                         ScaledButton(cons.maxWidth * 0.06, Icon(Icons.calendar_today, size: cons.maxWidth * 0.02), () {
                           DatePicker.showDateTimePicker(context, locale: LocaleType.zh, showTitleActions: true, currentTime: DateTime.now(), onConfirm: (dateTime) {
+                            widget.setValue(widget.title, dateTime.toIso8601String());
                             setState(() {
                               this.currentValue = dateTime;
                             });
@@ -235,23 +274,33 @@ class DateTimeFieldState extends State<DateTimeField> {
 }
 
 class DateField extends StatefulWidget {
-  final String title, value;
+  final String title;
+  final Function getValue;
+  final Function setValue;
   final bool editable;
 
-  DateField(this.title, this.value, {this.editable: true});
+  DateField(this.title, this.getValue, this.setValue, {this.editable: true});
 
-  DateFieldState createState() => DateFieldState(this.value);
+  DateFieldState createState() => DateFieldState();
 }
 
 class DateFieldState extends State<DateField> {
-  String currentValue;
+  DateTime currentValue;
 
-  DateFieldState(value) {
-    if (value == '') {
-      this.currentValue = ' ';
+  @override
+  void initState() {
+    String val = widget.getValue(widget.title);
+    if (val.contains('T')) {
+      currentValue = DateTime.parse(val);
     } else {
-      this.currentValue = value;
+      try {
+        currentValue = DateTime.fromMillisecondsSinceEpoch(int.parse(val));
+      } catch (e) {
+        print(e);
+      }
     }
+
+    super.initState();
   }
 
   @override
@@ -266,7 +315,7 @@ class DateFieldState extends State<DateField> {
                     padding: EdgeInsets.only(right: 15.0),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(widget.title + ':'),
+                      child: Text(upperFirst(widget.title) + ':'),
                     ))),
             Flexible(
                 flex: 85,
@@ -275,11 +324,12 @@ class DateFieldState extends State<DateField> {
                   child: LayoutBuilder(builder: (ctx, cons) {
                     return Row(
                       children: <Widget>[
-                        Text('  ' + this.currentValue.toString() + '  '),
+                        Text('  ' + (currentValue == null ? '' : DateFormat('yyyy-MM-dd').format(currentValue)) + '  '),
                         ScaledButton(cons.maxWidth * 0.03, Icon(Icons.calendar_today, size: cons.maxWidth * 0.02), () {
                           DatePicker.showDatePicker(context, locale: LocaleType.zh, showTitleActions: true, currentTime: DateTime.now(), onConfirm: (date) {
+                            widget.setValue(widget.title, date.toIso8601String());
                             setState(() {
-                              this.currentValue = date.year.toString() + '/' + date.month.toString() + '/' + date.day.toString();
+                              currentValue = date;
                             });
                           });
                         }, editable: widget.editable),
@@ -294,28 +344,37 @@ class DateFieldState extends State<DateField> {
 
 class FloatField extends StatefulWidget {
   final String title;
-  final double value;
+  final Function getValue;
+  final Function setValue;
   final bool editable;
 
-  FloatField(this.title, this.value, {this.editable: true});
+  FloatField(this.title, this.getValue, this.setValue, {this.editable: true});
 
-  FloatFieldState createState() => FloatFieldState(this.value);
+  FloatFieldState createState() => FloatFieldState();
 }
 
 class FloatFieldState extends State<FloatField> {
-  double currentValue;
   TextEditingController controller = TextEditingController();
-
-  FloatFieldState(this.currentValue);
+  final FocusNode focusNode = FocusNode();
+  @override
+  void initState() {
+    focusNode.addListener(() {
+      if (!focusNode.hasFocus) {
+        try {
+          double.parse(controller.text);
+          widget.setValue(widget.title, int.parse(controller.text));
+        } catch (e) {
+          print("Failed");
+          controller.text = widget.getValue(widget.title).toString();
+        }
+      }
+    });
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.value == null) {
-      controller.text = '(null)';
-    } else {
-      controller.text = widget.value.toStringAsFixed(10);
-    }
-
+    controller.text = widget.getValue(widget.title).toString();
     return Padding(
         padding: EdgeInsets.only(left: 5, right: 5, bottom: MODEL_COLUMN_SPACE),
         child: Row(
@@ -326,7 +385,7 @@ class FloatFieldState extends State<FloatField> {
                     padding: EdgeInsets.only(right: 15.0),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(widget.title + ':'),
+                      child: Text(upperFirst(widget.title) + ':'),
                     ))),
             Flexible(
                 flex: 85,
@@ -337,31 +396,24 @@ class FloatFieldState extends State<FloatField> {
                       return Row(
                         children: <Widget>[
                           ScaledButton(cons.maxWidth * 0.03, Icon(Icons.remove), () {
-                            this.currentValue -= 0.1;
-                            controller.text = this.currentValue.toStringAsFixed(10);
+                            setState(() {
+                              controller.text = (int.parse(controller.text) - 0.1).toString();
+                              widget.setValue(widget.title, int.parse(controller.text));
+                            });
                           }, editable: widget.editable),
                           Container(
-                              width: 250,
-                              child: Padding(
-                                  padding: EdgeInsets.only(left: 10),
-                                  child: TextField(
-                                    enabled: widget.editable,
-                                    controller: controller,
-                                    textAlign: TextAlign.center,
-                                    onEditingComplete: () {
-                                      if (controller.text == "") this.currentValue = 0.0;
-                                      try {
-                                        double.parse(controller.text);
-                                        this.currentValue = double.parse(controller.text);
-                                      } catch (e) {
-                                        print("Failed");
-                                        controller.text = this.currentValue.toStringAsFixed(10);
-                                      }
-                                    },
-                                  ))),
+                              width: 180,
+                              child: TextField(
+                                enabled: widget.editable,
+                                controller: controller,
+                                textAlign: TextAlign.center,
+                                focusNode: focusNode,
+                              )),
                           ScaledButton(cons.maxWidth * 0.03, Icon(Icons.add), () {
-                            this.currentValue += 0.1;
-                            controller.text = this.currentValue.toStringAsFixed(10);
+                            setState(() {
+                              controller.text = (int.parse(controller.text) + 0.1).toString();
+                              widget.setValue(widget.title, int.parse(controller.text));
+                            });
                           }, editable: widget.editable),
                         ],
                       );
@@ -375,23 +427,37 @@ class FloatFieldState extends State<FloatField> {
 
 class IntegerField extends StatefulWidget {
   final String title;
-  final int value;
+  final Function getValue;
+  final Function setValue;
   final bool editable;
 
-  IntegerField(this.title, this.value, {this.editable: true});
+  IntegerField(this.title, this.getValue, this.setValue, {this.editable: true});
 
-  IntegerFieldState createState() => IntegerFieldState(this.value);
+  IntegerFieldState createState() => IntegerFieldState();
 }
 
 class IntegerFieldState extends State<IntegerField> {
-  int currentValue;
   TextEditingController controller = TextEditingController();
-
-  IntegerFieldState(this.currentValue);
+  final FocusNode focusNode = FocusNode();
+  @override
+  void initState() {
+    focusNode.addListener(() {
+      if (!focusNode.hasFocus) {
+        try {
+          int.parse(controller.text);
+          widget.setValue(widget.title, int.parse(controller.text));
+        } catch (e) {
+          print("Failed");
+          controller.text = widget.getValue(widget.title).toString();
+        }
+      }
+    });
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    controller.text = this.currentValue == null ? '' : this.currentValue.toString();
+    controller.text = widget.getValue(widget.title).toString();
     return Padding(
         padding: EdgeInsets.only(left: 5, right: 5, bottom: MODEL_COLUMN_SPACE),
         child: Row(
@@ -402,7 +468,7 @@ class IntegerFieldState extends State<IntegerField> {
                     padding: EdgeInsets.only(right: 15.0),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(widget.title + ':'),
+                      child: Text(upperFirst(widget.title) + ':'),
                     ))),
             Flexible(
                 flex: 85,
@@ -413,11 +479,10 @@ class IntegerFieldState extends State<IntegerField> {
                       return Row(
                         children: <Widget>[
                           ScaledButton(cons.maxWidth * 0.03, Icon(Icons.remove), () {
-                            if (this.currentValue != null) {
-                              setState(() {
-                                this.currentValue -= 1;
-                              });
-                            }
+                            setState(() {
+                              controller.text = (int.parse(controller.text) - 1).toString();
+                              widget.setValue(widget.title, int.parse(controller.text));
+                            });
                           }, editable: widget.editable),
                           Container(
                               width: 120,
@@ -425,23 +490,13 @@ class IntegerFieldState extends State<IntegerField> {
                                 enabled: widget.editable,
                                 controller: controller,
                                 textAlign: TextAlign.center,
-                                onEditingComplete: () {
-                                  if (controller.text == "") this.currentValue = 0;
-                                  try {
-                                    double.parse(controller.text);
-                                    this.currentValue = int.parse(controller.text);
-                                  } catch (e) {
-                                    print("Failed");
-                                    controller.text = this.currentValue.round().toString();
-                                  }
-                                },
+                                focusNode: focusNode,
                               )),
                           ScaledButton(cons.maxWidth * 0.03, Icon(Icons.add), () {
-                            if (this.currentValue != null) {
-                              setState(() {
-                                this.currentValue += 1;
-                              });
-                            }
+                            setState(() {
+                              controller.text = (int.parse(controller.text) + 1).toString();
+                              widget.setValue(widget.title, int.parse(controller.text));
+                            });
                           }, editable: widget.editable),
                         ],
                       );
@@ -455,17 +510,23 @@ class IntegerFieldState extends State<IntegerField> {
 
 class BooleanField extends StatefulWidget {
   final String title;
-  final bool initValue, editable;
+  final Function getValue;
+  final Function setValue;
+  final bool editable;
 
-  BooleanField(this.title, this.initValue, {this.editable});
+  BooleanField(this.title, this.getValue, this.setValue, {this.editable});
 
-  BooleanFieldState createState() => BooleanFieldState(this.initValue);
+  BooleanFieldState createState() => BooleanFieldState();
 }
 
 class BooleanFieldState extends State<BooleanField> {
-  bool checkValue;
+  bool currentValue;
 
-  BooleanFieldState(this.checkValue);
+  @override
+  void initState() {
+    currentValue = widget.getValue(widget.title);
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -479,18 +540,19 @@ class BooleanFieldState extends State<BooleanField> {
                     padding: EdgeInsets.only(right: 15.0),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(widget.title + ':'),
+                      child: Text(upperFirst(widget.title) + ':'),
                     ))),
             Flexible(
                 flex: 85,
                 child: Align(
                     alignment: Alignment.centerLeft,
                     child: Checkbox(
-                      value: this.checkValue,
+                      value: this.currentValue,
                       onChanged: (newValue) {
                         if (widget.editable) {
+                          widget.setValue(widget.title, newValue);
                           setState(() {
-                            this.checkValue = newValue;
+                            this.currentValue = newValue;
                           });
                         }
                       },
@@ -501,15 +563,22 @@ class BooleanFieldState extends State<BooleanField> {
 }
 
 class StringField extends StatelessWidget {
-  final String title, value;
+  final String title;
+  final Function getValue;
+  final Function setValue;
   final bool editable;
+  final FocusNode focusNode = FocusNode();
+  final TextEditingController controller = TextEditingController();
 
-  StringField(this.title, this.value, {this.editable: true});
+  StringField(this.title, this.getValue, this.setValue, {this.editable: true}) {
+    focusNode.addListener(() {
+      setValue(this.title, controller.text);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final TextEditingController controller = TextEditingController();
-    controller.text = this.value;
+    controller.text = getValue(this.title);
     return Padding(
         padding: EdgeInsets.only(left: 5, right: 5, bottom: MODEL_COLUMN_SPACE),
         child: Row(
@@ -520,7 +589,7 @@ class StringField extends StatelessWidget {
                     padding: EdgeInsets.only(right: 15.0),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(this.title + ':'),
+                      child: Text(upperFirst(this.title) + ':'),
                     ))),
             Flexible(
                 flex: 85,
@@ -529,6 +598,7 @@ class StringField extends StatelessWidget {
                     child: TextField(
                       enabled: this.editable,
                       controller: controller,
+                      focusNode: focusNode,
                     ))),
           ],
         ));

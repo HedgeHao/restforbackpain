@@ -56,6 +56,15 @@ class MyHomeState extends State<MyHome> {
     });
   }
 
+  void refreshConfigure() {
+    tabInstances.removeRange(2, tabInstances.length);
+    routeMap.removeRange(2, routeMap.length);
+    setState(() {
+      _future = null;
+      _future = loadConfigFile();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
@@ -64,9 +73,6 @@ class MyHomeState extends State<MyHome> {
         if (!snapshot.hasData) {
           return Text("Loading...");
         } else {
-          Global.configure = jsonDecode(snapshot.data);
-          // print('Load Config File:' + Global.configure.toString());
-
           List<Widget> sidePanelModels = List<Widget>();
 
           tabInstances.add(DashboardScreen());
@@ -74,35 +80,42 @@ class MyHomeState extends State<MyHome> {
           tabInstances.add(DBToolScreen());
           routeMap.add('dbtool');
 
-          Map<String, dynamic> models = Global.configure['models'];
-          for (String name in models.keys) {
-            Map<String, dynamic> model = models[name];
-            sidePanelModels.add(GestureDetector(
-                child: Text(
-                  '   - ' + name,
-                  style: TEXTSTYLE_SIDE,
-                ),
-                onTap: () {
-                  switchTab('ml_' + name);
-                }));
+          try {
+            Global.configure = jsonDecode(snapshot.data);
+            //print('Load Config File:' + Global.configure.toString());
 
-            if (routeMap.indexOf('ml_' + name) < 0) {
-              tabInstances.add(ModelListScreen(name, model['struct'], model['endpoints'], switchTab));
-              routeMap.add('ml_' + name);
-            }
+            Map<String, dynamic> models = Global.configure['models'];
+            for (String name in models.keys) {
+              Map<String, dynamic> model = models[name];
+              sidePanelModels.add(GestureDetector(
+                  child: Text(
+                    '   - ' + name,
+                    style: TEXTSTYLE_SIDE,
+                  ),
+                  onTap: () {
+                    switchTab('ml_' + name);
+                  }));
 
-            if (routeMap.indexOf('m_' + name) < 0) {
-              tabInstances.add(ModelScreen(name, model['struct'], switchTab));
-              routeMap.add('m_' + name);
+              if (routeMap.indexOf('ml_' + name) < 0) {
+                tabInstances.add(ModelListScreen(name, model['struct'], model['endpoints'], switchTab));
+                routeMap.add('ml_' + name);
+              }
+
+              if (routeMap.indexOf('m_' + name) < 0) {
+                tabInstances.add(ModelScreen(name, model['struct'], switchTab));
+                routeMap.add('m_' + name);
+              }
             }
+          } catch (e) {
+            print('Config file error:' + e.toString());
           }
 
           return Container(
               child: Row(
             children: <Widget>[
-              Flexible(flex: 1, child: Container(color: Colors.blue, child: SidePanel(sidePanelModels, switchTab))),
+              Flexible(flex: 2, child: Container(color: Colors.blue, child: SidePanel(sidePanelModels, switchTab, refreshConfigure))),
               Flexible(
-                  flex: 5,
+                  flex: 8,
                   child: IndexedStack(
                     index: this.tabIndex,
                     children: this.tabInstances,
@@ -125,8 +138,9 @@ class DashboardScreen extends StatelessWidget {
 class SidePanel extends StatelessWidget {
   final List<Widget> models;
   final Function switchTab;
+  final Function refresh;
 
-  SidePanel(this.models, this.switchTab);
+  SidePanel(this.models, this.switchTab, this.refresh);
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +154,10 @@ class SidePanel extends StatelessWidget {
               height: 50,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[fetchImageFromUrl(Global.configure['icon'], size: 50), Text(Global.configure['title'])],
+                children: <Widget>[
+                  fetchImageFromUrl(Global.getConfigure('icon').toString(), size: 50) ?? Icon(Icons.dashboard, size: 50),
+                  Text(Global.getConfigure('title') ?? 'Restforbackpain', style: TESTSTYLE_TITLE)
+                ],
               )),
           Divider(),
           Container(
@@ -174,7 +191,12 @@ class SidePanel extends StatelessWidget {
                         onPressed: () {
                           switchTab('dbtool');
                         },
-                      )
+                      ),
+                      FlatButton(
+                          child: Icon(Icons.refresh),
+                          onPressed: () {
+                            refresh();
+                          })
                     ],
                   ))),
         ],
