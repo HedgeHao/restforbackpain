@@ -6,6 +6,7 @@ import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class ModelScreen extends StatefulWidget {
   final String name;
@@ -16,33 +17,26 @@ class ModelScreen extends StatefulWidget {
 
   ModelScreenState stateObj;
 
-  ModelScreenState createState(){
+  ModelScreenState createState() {
     stateObj = ModelScreenState();
     return stateObj;
   }
 }
 
 class ModelScreenState extends State<ModelScreen> {
-  String test;
-  Map<String, dynamic> data = {};
-
-  ModelScreenState();
+  Map<String, dynamic> data;
 
   @override
   void initState() {
-    test = "DEFAULT";
+    data = {};
     super.initState();
   }
 
-  void fetchData(String id) {
-    String endpointParsed = Global.configure['models'][widget.name]['endpoints']['actions']['read'][1].toString().replaceAll('\$id', id);
-    print(endpointParsed);
+  void update(int id) {
+    String endpointParsed = Global.configure['models'][widget.name]['endpoints']['actions']['read'][1].toString().replaceAll('\$id', id.toString());
     String url = Global.configure['host'] + '/' + Global.configure['models'][widget.name]['endpoints']['name'] + '/' + endpointParsed;
-    print(url);
     http.get(url).then((http.Response resp) {
-      print(resp);
       Map<String, dynamic> respObj = json.decode(resp.body);
-      Map<String, dynamic> data = Map<String, dynamic>();
       if (respObj['code'] == 200) {
         setState(() {
           this.data = respObj['data'];
@@ -51,60 +45,49 @@ class ModelScreenState extends State<ModelScreen> {
     });
   }
 
-  List<Widget> buildContent(Map<String, dynamic> data) {
-    print('+BuildContent');
-    print(data);
-    List<Widget> contents = List<Widget>();
-    for (Map<String, dynamic> field in widget.struct) {
-      switch (field['type']) {
-        case 'string':
-          contents.add(StringField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null));
-          break;
-        case 'boolean':
-          contents.add(BooleanField(upperFirst(field['name']), data[field['name']] == true, editable: field['editable'] == null));
-          break;
-        case 'integer':
-          contents.add(IntegerField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null));
-          break;
-        case 'float':
-          contents.add(FloatField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null));
-          break;
-        case 'date':
-          contents.add(DateField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null));
-          break;
-        case 'html':
-          contents.add(HtmlField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null));
-          break;
-        default:
-      }
+  Widget ModelField(Map<String, dynamic> field) {
+    switch (field['type']) {
+      case 'string':
+        return StringField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+      case 'boolean':
+        return BooleanField(upperFirst(field['name']), data[field['name']] == true, editable: field['editable'] == null);
+      case 'integer':
+        return IntegerField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+      case 'float':
+        return FloatField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+      case 'date':
+        return DateField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+      case 'datetime':
+        return DateTimeField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+      case 'html':
+        return HtmlField(upperFirst(field['name']), data[field['name']], editable: field['editable'] == null);
+      default:
+        return Text('Error:' + field.toString());
     }
-
-    return contents;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Text(this.test);
-    // return Container(
-    //     color: Colors.white,
-    //     padding: EdgeInsets.all(10.0),
-    //     child: Column(children: <Widget>[
-    //       Row(
-    //         children: <Widget>[
-    //           FlatButton(
-    //               child: Icon(Icons.arrow_back_ios),
-    //               onPressed: () {
-    //                 widget.switchModelList(widget.name);
-    //               }),
-    //           Align(alignment: Alignment.centerLeft, child: Text(upperFirst(widget.name), style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold))),
-    //         ],
-    //       ),
-    //       Expanded(
-    //           child: SingleChildScrollView(
-    //               child: Column(
-    //         children: buildContent(this.data),
-    //       )))
-    //     ]));
+    return Container(
+        color: Colors.white,
+        padding: EdgeInsets.all(10.0),
+        child: Column(children: <Widget>[
+          Row(
+            children: <Widget>[
+              FlatButton(
+                  child: Icon(Icons.arrow_back_ios),
+                  onPressed: () {
+                    widget.switchModelList('ml_' + widget.name);
+                  }),
+              Align(alignment: Alignment.centerLeft, child: Text(upperFirst(widget.name), style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          Expanded(
+              child: SingleChildScrollView(
+                  child: Column(
+            children: <Widget>[for (Map<String, dynamic> field in widget.struct) ModelField(field)],
+          )))
+        ]));
   }
 }
 
@@ -184,6 +167,70 @@ class HtmlFieldState extends State<HtmlField> {
         )
       ],
     );
+  }
+}
+
+class DateTimeField extends StatefulWidget {
+  final String title, value;
+  final bool editable;
+
+  DateTimeField(this.title, this.value, {this.editable: true});
+
+  DateTimeFieldState createState() => DateTimeFieldState(this.value);
+}
+
+class DateTimeFieldState extends State<DateTimeField> {
+  DateTime currentValue;
+
+  DateTimeFieldState(String val) {
+    if (val == null) {
+      currentValue = null;
+    } else if (val.contains('T')) {
+      currentValue = DateTime.parse(val);
+    } else {
+      try {
+        currentValue = DateTime.fromMillisecondsSinceEpoch(int.parse(val) * 1000);
+      } catch (e) {
+        print('Datetime parse error:' + e.toString());
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+        padding: EdgeInsets.only(left: 5, right: 5, bottom: MODEL_COLUMN_SPACE),
+        child: Row(
+          children: <Widget>[
+            Flexible(
+                flex: 15,
+                child: Padding(
+                    padding: EdgeInsets.only(right: 15.0),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(widget.title + ':'),
+                    ))),
+            Flexible(
+                flex: 85,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: LayoutBuilder(builder: (ctx, cons) {
+                    return Row(
+                      children: <Widget>[
+                        Text('  ' + (this.currentValue == null ? '' : DateFormat('yyyy-MM-dd - kk:mm:ss').format(this.currentValue)) + '  '),
+                        ScaledButton(cons.maxWidth * 0.06, Icon(Icons.calendar_today, size: cons.maxWidth * 0.02), () {
+                          DatePicker.showDateTimePicker(context, locale: LocaleType.zh, showTitleActions: true, currentTime: DateTime.now(), onConfirm: (dateTime) {
+                            setState(() {
+                              this.currentValue = dateTime;
+                            });
+                          });
+                        }, editable: widget.editable),
+                      ],
+                    );
+                  }),
+                )),
+          ],
+        ));
   }
 }
 
@@ -344,7 +391,7 @@ class IntegerFieldState extends State<IntegerField> {
 
   @override
   Widget build(BuildContext context) {
-    controller.text = this.currentValue.toString();
+    controller.text = this.currentValue == null ? '' : this.currentValue.toString();
     return Padding(
         padding: EdgeInsets.only(left: 5, right: 5, bottom: MODEL_COLUMN_SPACE),
         child: Row(
@@ -366,9 +413,11 @@ class IntegerFieldState extends State<IntegerField> {
                       return Row(
                         children: <Widget>[
                           ScaledButton(cons.maxWidth * 0.03, Icon(Icons.remove), () {
-                            setState(() {
-                              this.currentValue -= 1;
-                            });
+                            if (this.currentValue != null) {
+                              setState(() {
+                                this.currentValue -= 1;
+                              });
+                            }
                           }, editable: widget.editable),
                           Container(
                               width: 120,
@@ -388,9 +437,11 @@ class IntegerFieldState extends State<IntegerField> {
                                 },
                               )),
                           ScaledButton(cons.maxWidth * 0.03, Icon(Icons.add), () {
-                            setState(() {
-                              this.currentValue += 1;
-                            });
+                            if (this.currentValue != null) {
+                              setState(() {
+                                this.currentValue += 1;
+                              });
+                            }
                           }, editable: widget.editable),
                         ],
                       );

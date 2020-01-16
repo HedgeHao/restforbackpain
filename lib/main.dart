@@ -28,6 +28,8 @@ class MyHomeState extends State<MyHome> {
   Future _future;
   Map<String, ModelListScreen> modelLists = Map<String, ModelListScreen>();
   Map<String, ModelScreen> modelScreens = Map<String, ModelScreen>();
+  int tabIndex;
+  List<String> routeMap = List<String>();
 
   // Future<String> loadConfigFile() async => await rootBundle.loadString('assets/data/config.json');
   Future<String> loadConfigFile() async {
@@ -36,44 +38,21 @@ class MyHomeState extends State<MyHome> {
 
   @override
   void initState() {
+    tabIndex = 0;
     _future = loadConfigFile();
-    tabInstances['dashboard'] = DashboardScreen();
-    tabInstances['dbtool'] = DBToolScreen();
     super.initState();
   }
 
   final List<String> availabelTabs = ['dashboard', 'users'];
-  Map<String, Widget> tabInstances = {};
+  List<Widget> tabInstances = List<Widget>();
   Widget currentTab;
 
-  void switchModelListTab(String name) {
+  void switchTab(String name, {Map<String, dynamic> data}) {
     setState(() {
-      currentTab = blankTab;
-    });
-
-    Future.delayed(Duration(milliseconds: 10), () {
-      setState(() {
-        currentTab = this.modelLists[name];
-      });
-    });
-  }
-
-  void switchModelTab(String name, Map<String, dynamic> pData) {
-    print("+switchModelTab");
-    print(this.modelScreens[name].hashCode);
-    setState(() {
-      currentTab = this.modelScreens[name];
-      this.modelScreens[name].stateObj.setState((){
-        print("+Debug");
-       print(this.modelScreens[name].stateObj.test);
-       this.modelScreens[name].stateObj.test = "HELLO";
-      });
-    });
-  }
-
-  void switchTab(String name) {
-    setState(() {
-      currentTab = this.tabInstances[name];
+      if (name.startsWith('m_')) {
+        (tabInstances[routeMap.indexOf(name)] as ModelScreen).stateObj.update(data['id']);
+      }
+      this.tabIndex = routeMap.indexOf(name);
     });
   }
 
@@ -85,13 +64,15 @@ class MyHomeState extends State<MyHome> {
         if (!snapshot.hasData) {
           return Text("Loading...");
         } else {
-          if (currentTab == null) {
-            currentTab = tabInstances["dashboard"];
-          }
           Global.configure = jsonDecode(snapshot.data);
           // print('Load Config File:' + Global.configure.toString());
 
           List<Widget> sidePanelModels = List<Widget>();
+
+          tabInstances.add(DashboardScreen());
+          routeMap.add('dashboard');
+          tabInstances.add(DBToolScreen());
+          routeMap.add('dbtool');
 
           Map<String, dynamic> models = Global.configure['models'];
           for (String name in models.keys) {
@@ -102,16 +83,17 @@ class MyHomeState extends State<MyHome> {
                   style: TEXTSTYLE_SIDE,
                 ),
                 onTap: () {
-                  switchModelListTab(name);
+                  switchTab('ml_' + name);
                 }));
 
-            if (!modelLists.containsKey(name)) {
-              modelLists[name] = ModelListScreen(name, model['struct'], model['endpoints'], switchModelTab);
+            if (routeMap.indexOf('ml_' + name) < 0) {
+              tabInstances.add(ModelListScreen(name, model['struct'], model['endpoints'], switchTab));
+              routeMap.add('ml_' + name);
             }
 
-            if (!modelScreens.containsKey(name)) {
-              modelScreens[name] = ModelScreen(name, model['struct'], switchModelListTab);
-              print(modelScreens[name].hashCode);
+            if (routeMap.indexOf('m_' + name) < 0) {
+              tabInstances.add(ModelScreen(name, model['struct'], switchTab));
+              routeMap.add('m_' + name);
             }
           }
 
@@ -119,7 +101,12 @@ class MyHomeState extends State<MyHome> {
               child: Row(
             children: <Widget>[
               Flexible(flex: 1, child: Container(color: Colors.blue, child: SidePanel(sidePanelModels, switchTab))),
-              Flexible(flex: 5, child: currentTab),
+              Flexible(
+                  flex: 5,
+                  child: IndexedStack(
+                    index: this.tabIndex,
+                    children: this.tabInstances,
+                  )),
             ],
           ));
         }

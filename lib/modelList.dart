@@ -19,7 +19,6 @@ class ModelListScreen extends StatefulWidget {
 
 class ModelListScreenState extends State<ModelListScreen> {
   Future<List<Map<String, dynamic>>> modelData;
-  // final Function switchTab;
   List<Widget> headers = List<Widget>();
   List<String> fields = List<String>();
 
@@ -30,7 +29,7 @@ class ModelListScreenState extends State<ModelListScreen> {
   }
 
   void dataRowClicked(Map<String, dynamic> pData) {
-    widget.switchModel(widget.name, pData);
+    widget.switchModel('m_' + widget.name, data:pData);
   }
 
   Future<List<Map<String, dynamic>>> fetchData() async {
@@ -59,8 +58,6 @@ class ModelListScreenState extends State<ModelListScreen> {
         fields.add(field['name'].toString());
         if (count > fieldNum) break;
       }
-
-      print(fields);
 
       for (String field in fields) {
         headers.add(Padding(padding: EdgeInsets.only(left: 3, right: 3), child: Container(color: Colors.blue, width: 100, height: 30, child: Text(upperFirst(field), textAlign: TextAlign.center))));

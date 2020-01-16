@@ -141,6 +141,11 @@ class DBToolScreenState extends State<DBToolScreen> {
         Row(
           children: <Widget>[
             FlatButton(
+                child: Text('Edit'),
+                onPressed: () {
+                  Process.run('open', [getConfigFilePath()]);
+                }),
+            FlatButton(
                 child: Text('Copy'),
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: configJson));
