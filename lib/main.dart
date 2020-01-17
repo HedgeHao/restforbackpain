@@ -1,14 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:admin_template/dbTools.dart';
-import 'package:admin_template/modelList.dart';
+import 'package:restforbackpain/dbTools.dart';
+import 'package:restforbackpain/modelList.dart';
 import 'package:flutter/material.dart';
 
-import 'package:admin_template/global.dart' as Global;
-import 'package:admin_template/ui.dart';
-import 'package:admin_template/utils.dart';
-import 'package:admin_template/model.dart';
+import 'package:restforbackpain/global.dart' as Global;
+import 'package:restforbackpain/ui.dart';
+import 'package:restforbackpain/utils.dart';
+import 'package:restforbackpain/model.dart';
 
 Widget blankTab = BlankTab();
 void main() => runApp(MyApp());
@@ -156,7 +156,7 @@ class SidePanel extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   fetchImageFromUrl(Global.getConfigure('icon').toString(), size: 50) ?? Icon(Icons.dashboard, size: 50),
-                  Text(Global.getConfigure('title') ?? 'Restforbackpain', style: TESTSTYLE_TITLE)
+                  Text(Global.getConfigure('title') ?? 'RestForBackPain', style: TESTSTYLE_TITLE)
                 ],
               )),
           Divider(),

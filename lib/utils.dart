@@ -1,8 +1,9 @@
-import 'package:admin_template/global.dart' as Global;
+import 'package:restforbackpain/global.dart' as Global;
 
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 import 'package:path/path.dart' as path;
+import 'dart:io';
 
 String upperFirst(String s) {
   return s[0].toUpperCase() + s.substring(1);
@@ -35,7 +36,12 @@ String getFetchUrl(String model, String action) {
 
 String getConfigFilePath() {
   print(Platform.environment['HOME']);
-  return Platform.environment['HOME'] + '/.config.json';
+  String path = Platform.environment['HOME'] + '/.config.json';
+  File f = File(path);
+  if(!f.existsSync()){
+    f.writeAsStringSync("");
+  }
+  return path;
 }
 
 void answerDialog(BuildContext context, String title, String msg, Function callback, {List<String> options}) {

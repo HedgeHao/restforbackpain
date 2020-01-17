@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:mysql1/mysql1.dart' as MySQL;
 import 'package:postgres/postgres.dart' as Psql;
 
-import 'package:admin_template/utils.dart';
-import 'package:admin_template/jsonText.dart';
+import 'package:restforbackpain/utils.dart';
+import 'package:restforbackpain/jsonText.dart';
 
 class DBToolScreen extends StatefulWidget {
   DBToolScreenState createState() => DBToolScreenState();

@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:admin_template/utils.dart';
-import 'package:admin_template/global.dart' as Global;
+import 'package:restforbackpain/utils.dart';
+import 'package:restforbackpain/global.dart' as Global;
 
 class ModelListScreen extends StatefulWidget {
   final String name;

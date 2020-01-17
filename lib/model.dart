@@ -1,6 +1,6 @@
-import 'package:admin_template/global.dart' as Global;
-import 'package:admin_template/ui.dart';
-import 'package:admin_template/utils.dart';
+import 'package:restforbackpain/global.dart' as Global;
+import 'package:restforbackpain/ui.dart';
+import 'package:restforbackpain/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 import 'package:flutter_html/flutter_html.dart';
