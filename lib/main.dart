@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:restforbackpain/dbTools.dart';
 import 'package:restforbackpain/modelList.dart';
 import 'package:flutter/material.dart';
+import 'package:window_size/window_size.dart';
 
 import 'package:restforbackpain/global.dart' as Global;
 import 'package:restforbackpain/ui.dart';
@@ -38,6 +39,7 @@ class MyHomeState extends State<MyHome> {
 
   @override
   void initState() {
+    setWindowFrame(Rect.fromLTWH(0, 100, 1440, 786));
     tabIndex = 0;
     _future = loadConfigFile();
     super.initState();
